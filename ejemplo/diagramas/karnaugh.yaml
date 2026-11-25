@@ -1,0 +1,4 @@
+type: karnaugh
+title: Múltiplos de 3
+vars: [A, B, C, D]
+minterms: [0, 3, 6, 9, 12, 15]

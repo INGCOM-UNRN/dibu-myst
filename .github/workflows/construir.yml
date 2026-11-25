@@ -1,0 +1,85 @@
+# Workflow reutilizable: construye el plugin contra dibu, corre las pruebas y construye el
+# sitio de ejemplo (y su PDF) con mystmd. Clona INGCOM-UNRN/dibu (público) al lado, con la
+# misma disposición ../dibu que en desarrollo.
+name: Construir
+
+on:
+  workflow_call:
+    inputs:
+      dibu_ref:
+        description: Rama, tag o commit de dibu
+        type: string
+        default: main
+    outputs:
+      dibu_sha:
+        description: Commit de dibu usado
+        value: ${{ jobs.construir.outputs.dibu_sha }}
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  construir:
+    name: Plugin y pruebas
+    runs-on: ubuntu-latest
+    outputs:
+      dibu_sha: ${{ steps.dibu.outputs.sha }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          path: dibu-myst
+      - name: Clonar dibu (${{ inputs.dibu_ref }})
+        uses: actions/checkout@v7
+        with:
+          repository: ${{ github.repository_owner }}/dibu
+          ref: ${{ inputs.dibu_ref }}
+          path: dibu
+      - id: dibu
+        run: echo "sha=$(git -C dibu rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: dibu -> target
+      - run: sudo apt-get update -q && sudo apt-get install -y -q binaryen
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - name: Sintaxis
+        working-directory: dibu-myst
+        run: for f in src/*.mjs scripts/*.mjs pruebas/*.mjs; do node --check "$f"; done
+      - name: Build
+        working-directory: dibu-myst
+        run: npm run build
+      - name: Pruebas del plugin
+        working-directory: dibu-myst
+        run: npm test
+      - name: mystmd y Typst
+        run: npm install -g mystmd
+      - uses: typst-community/setup-typst@v4
+      - name: Sitio de ejemplo y PDF
+        working-directory: dibu-myst
+        run: |
+          myst --version
+          bash scripts/probar-sitio.sh --pdf
+      - name: Resumen
+        run: |
+          echo "### dibu-myst" >> "$GITHUB_STEP_SUMMARY"
+          echo "- dibu: \`${{ inputs.dibu_ref }}\` ($(git -C dibu log -1 --format='%h %s'))" >> "$GITHUB_STEP_SUMMARY"
+          echo "- mystmd: $(myst --version)" >> "$GITHUB_STEP_SUMMARY"
+          echo "- dibu-myst.mjs: $(du -h dibu-myst/dist/dibu-myst.mjs | cut -f1)" >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: dist
+          path: dibu-myst/dist/dibu-myst.mjs
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v7
+        with:
+          name: ejemplo
+          path: |
+            dibu-myst/ejemplo/_build/exports/apunte.pdf
+            dibu-myst/ejemplo/_build/site

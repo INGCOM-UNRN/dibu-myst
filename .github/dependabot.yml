@@ -1,0 +1,7 @@
+# Sin dependencias npm; el motor es el crate dibu-wasm de dibu. Aquí sólo las Actions.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly

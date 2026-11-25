@@ -1,0 +1,21 @@
+# Sitio de ejemplo de dibu-myst: `myst start` o `myst build --html` desde esta carpeta,
+# después de `npm run build` en la raíz del repositorio.
+version: 1
+project:
+  title: dibu-myst — ejemplo
+  description: Diagramas de dibu dibujados por el plugin al construir el sitio.
+  plugins:
+    - ../dist/dibu-myst.mjs
+    # Fuera de este repositorio, desde el último release:
+    # - https://github.com/INGCOM-UNRN/dibu-myst/releases/latest/download/dibu-myst.mjs
+  toc:
+    - file: index.md
+    - file: apunte.md
+  exports:
+    - id: pdf
+      file: apunte.md
+      format: typst
+      template: lapreprint-typst
+      output: _build/exports/apunte.pdf
+site:
+  template: book-theme
