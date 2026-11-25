@@ -16,8 +16,12 @@ project:
 ```
 
 mystmd descarga el plugin y lo guarda en su caché. Para fijar una versión, usar
-`releases/download/vX.Y.Z/dibu-myst.mjs`. También se puede descargar el archivo y poner la ruta
-local.
+`releases/download/vX.Y.Z/dibu-myst.mjs`.
+
+También se puede guardar una copia en el sitio, en `plugins/dibu-myst.mjs`, y cargarla con
+`- plugins/dibu-myst.mjs`: el build no depende de la red y el plugin cambia sólo cuando se
+actualiza la copia ([Actualizar el plugin en los sitios](#actualizar-el-plugin-en-los-sitios)).
+Así lo usan los apuntes de C y de Java.
 
 ### Bloques de código
 
@@ -86,6 +90,38 @@ Por variables de entorno, porque mystmd no pasa opciones a los plugins:
 ```bash
 DIBU_THEME=high-contrast myst build --html
 ```
+
+## Actualizar el plugin en los sitios
+
+Para los sitios que guardan una copia en `plugins/dibu-myst.mjs`:
+
+```bash
+# compilando el plugin desde este repositorio, con el dibu de ../dibu:
+scripts/actualizar-sitio.sh --commit ../../c/contenido/apunte ../../java/contenido/apunte
+# o con un release publicado (verifica su SHA256SUMS):
+scripts/actualizar-sitio.sh --release v0.2.0 --commit SITIO...
+```
+
+Para cada sitio, el script:
+
+1. comprueba que el `myst.yml` cargue `plugins/dibu-myst.mjs`;
+2. no hace nada si la copia ya es idéntica;
+3. copia el plugin nuevo y construye el sitio con `myst build --site`. Si el build falla, el
+   plugin no carga o informa errores, restaura la copia anterior y muestra el log;
+4. con `--commit`, hace el commit sólo de `plugins/dibu-myst.mjs`
+   (`build(myst): actualizar dibu-myst a X.Y.Z (dibu <commit>)`). Nunca hace push.
+
+Cada copia lleva la versión del plugin y el commit de dibu de su motor (`MOTOR`, que también
+aparece en el log de myst: `🔌 dibu 0.1.0 (motor 4e62d0a)`). Cuando cambia dibu (diagramas
+nuevos, correcciones), el procedimiento es:
+
+1. en `dibu`: commit y push (el CI tiene que pasar);
+2. en `dibu-myst`: `npm test` y `npm run test:sitio` con el dibu nuevo;
+3. `scripts/actualizar-sitio.sh --commit SITIO...` y, después de revisar, push de cada sitio.
+
+Si un sitio tiene errores de dibu en su contenido (un bloque inválido), el build de prueba falla
+también con el plugin actual: hay que corregir el bloque antes de actualizar. `--sin-probar`
+saltea el build.
 
 ## Desarrollo
 
