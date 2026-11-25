@@ -5,6 +5,7 @@
 // Uso: node scripts/construir.mjs [--sin-cargo]
 //   DIBU_DIR   ruta al repositorio dibu (por omisión ../dibu)
 //   DIBU_WASM  usar este dibu_wasm.wasm en vez de compilarlo
+//   DIBU_COMMIT  el commit de dibu que se informa (por omisión, git describe de DIBU_DIR)
 import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, writeFileSync, rmSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
@@ -42,11 +43,27 @@ try {
   /* wasm-opt es opcional */
 }
 
-const fuente = readFileSync(join(raiz, "src", "dibu-myst.mjs"), "utf8");
-const marca = "const MOTOR_BASE64 = null;";
-if (!fuente.includes(marca)) throw new Error(`falta la marca ${marca} en src/dibu-myst.mjs`);
+// El commit de dibu del motor (DIBU_COMMIT lo fija desde afuera, p. ej. con DIBU_WASM).
+let commit = process.env.DIBU_COMMIT || null;
+if (!commit) {
+  try {
+    commit = execFileSync("git", ["-C", dibu, "describe", "--tags", "--always", "--dirty"], { encoding: "utf8" }).trim();
+  } catch {
+    /* sin git: el plugin no informa el commit del motor */
+  }
+}
+
+let fuente = readFileSync(join(raiz, "src", "dibu-myst.mjs"), "utf8");
+const marcas = {
+  "const MOTOR_BASE64 = null;": `const MOTOR_BASE64 = ${JSON.stringify(wasm.toString("base64"))};`,
+  "export const MOTOR = null;": `export const MOTOR = ${JSON.stringify(commit)};`,
+};
+for (const [marca, valor] of Object.entries(marcas)) {
+  if (!fuente.includes(marca)) throw new Error(`falta la marca ${marca} en src/dibu-myst.mjs`);
+  fuente = fuente.replace(marca, valor);
+}
 const salida = join(dist, "dibu-myst.mjs");
-writeFileSync(salida, fuente.replace(marca, `const MOTOR_BASE64 = ${JSON.stringify(wasm.toString("base64"))};`));
+writeFileSync(salida, fuente);
 writeFileSync(join(dist, "dibu.wasm"), wasm);
 const kb = (n) => `${Math.round(n / 1024)} KiB`;
-console.log(`✓ ${salida} (${kb(readFileSync(salida).length)}, motor ${kb(wasm.length)})`);
+console.log(`✓ ${salida} (${kb(readFileSync(salida).length)}, motor ${kb(wasm.length)}, dibu ${commit ?? "?"})`);

@@ -23,7 +23,8 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 export const VERSION = "0.1.0";
-// El build (scripts/construir.mjs) reemplaza esta línea por el motor en base64.
+// El build (scripts/construir.mjs) reemplaza estas líneas por el commit de dibu y el motor en base64.
+export const MOTOR = null;
 const MOTOR_BASE64 = null;
 
 export const LENGUAJES = ["estructura", "statics", "dibu"];
@@ -248,7 +249,7 @@ const directiva = {
 };
 
 const plugin = {
-  name: `dibu ${VERSION}`,
+  name: `dibu ${VERSION}${MOTOR ? ` (motor ${MOTOR})` : ""}`,
   directives: [directiva],
   transforms: [transformacion],
 };
