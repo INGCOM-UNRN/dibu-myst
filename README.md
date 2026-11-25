@@ -37,6 +37,9 @@ capacity: 5
 ```
 ````
 
+Para mostrar la sintaxis sin dibujar el diagrama, usá `{code}`: los bloques
+```` ```{code} estructura ```` y ```` ```{code-block} estructura ```` quedan como código.
+
 ### Directiva `{dibu}`
 
 La directiva (alias `{estructura}`) agrega opciones y figuras numeradas:

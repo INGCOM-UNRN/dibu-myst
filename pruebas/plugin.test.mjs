@@ -10,7 +10,7 @@ import { fileURLToPath } from "node:url";
 const raiz = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const dibu = path.resolve(process.env.DIBU_DIR || path.join(raiz, "..", "dibu"));
 const dibuMyst = await import(path.join(raiz, "src", "dibu-myst.mjs"));
-const { default: plugin, transformarArbol, renderizar, leerTema, tipos } = dibuMyst;
+const { default: plugin, transformarArbol, esParaDibujar, renderizar, leerTema, tipos } = dibuMyst;
 const directiva = plugin.directives[0];
 
 function vfileFalso(ruta = "/no/existe/pagina.md") {
@@ -25,7 +25,8 @@ function vfileFalso(ruta = "/no/existe/pagina.md") {
     },
   };
 }
-const codigo = (lang, value) => ({ type: "code", lang, value });
+// Un bloque con valla, como lo deja mystmd (con posición en el archivo).
+const codigo = (lang, value, line = 1) => ({ type: "code", lang, value, position: { start: { line, column: 1 } } });
 const raizMdast = (...hijos) => ({ type: "root", children: [{ type: "block", children: hijos }] });
 
 test("el plugin declara la directiva y la transformación", () => {
@@ -54,6 +55,21 @@ test("los bloques estructura, statics y dibu se dibujan; el resto queda igual", 
   assert.equal(c.type, "image");
   assert.deepEqual(py, codigo("python", "print(1)"));
   assert.equal(vf.mensajes.length, 0);
+});
+
+test("los bloques de {code} estructura se dejan como código", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "dibu-myst-"));
+  const md = ["# Guía", "", "```estructura", "type: stack", "values: [1]", "```", "", "```{code} estructura", ":caption: x", "type: stack", "```", ""].join("\n");
+  fs.writeFileSync(path.join(dir, "guia.md"), md);
+  const lineas = md.split("\n");
+  assert.equal(esParaDibujar(codigo("estructura", "", 3), lineas), true);
+  assert.equal(esParaDibujar(codigo("estructura", "", 8), lineas), false, "{code} con posición");
+  assert.equal(esParaDibujar({ type: "code", lang: "estructura", value: "" }, lineas), false, "{code} sin posición");
+  const arbol = raizMdast(codigo("estructura", "type: stack\nvalues: [1]", 3), { type: "code", lang: "estructura", value: "type: stack" });
+  assert.equal(transformarArbol(arbol, vfileFalso(path.join(dir, "guia.md"))), 1);
+  const [img, code] = arbol.children[0].children;
+  assert.equal(img.type, "image");
+  assert.equal(code.type, "code");
 });
 
 test("un bloque inválido se reporta como error y se muestra en la página", () => {

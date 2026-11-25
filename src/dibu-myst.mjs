@@ -8,6 +8,7 @@
 //
 // Dibuja:
 //   - los bloques de código ```estructura, ```statics y ```dibu (la sintaxis de dibu sync-md);
+//     los de ```{code} estructura se dejan como código, para mostrar la sintaxis;
 //   - la directiva {dibu} (alias {estructura}), con :theme:, :width:, :align:, :alt:,
 //     :caption: y :label:, y opcionalmente un archivo YAML/JSON como argumento.
 //
@@ -169,15 +170,40 @@ export function nodoDiagrama(cuerpo, opciones = {}, vfile, posicion) {
 }
 
 // ── Transformación de los bloques de código ──────────────────────────────────────────────
+const DIRECTIVA_DE_CODIGO = /\{(code|code-block|code-cell|sourcecode|literalinclude)\}/;
+
+/**
+ * Si un bloque ```estructura/statics/dibu es para dibujar. Los de {code} / {code-block} no:
+ * muestran la sintaxis. mystmd no deja marca de la directiva en el nodo, pero sus salidas no
+ * tienen posición, y si la tienen, la línea de la fuente lo dice.
+ */
+export function esParaDibujar(nodo, lineas) {
+  const n = nodo.position?.start?.line;
+  if (!n) return false;
+  const linea = lineas?.[n - 1];
+  return linea === undefined || !DIRECTIVA_DE_CODIGO.test(linea);
+}
+
+function lineasDe(vfile) {
+  try {
+    return vfile?.path ? fs.readFileSync(vfile.path, "utf8").split(/\r?\n/) : null;
+  } catch {
+    return null;
+  }
+}
+
 /** Reemplaza, en el árbol, los bloques ```estructura/statics/dibu por sus diagramas. */
 export function transformarArbol(arbol, vfile) {
   let cuenta = 0;
+  let lineas;
   (function recorrer(nodo) {
     const hijos = nodo.children;
     if (!Array.isArray(hijos)) return;
     for (let i = 0; i < hijos.length; i++) {
       const h = hijos[i];
       if (h.type === "code" && LENGUAJES.includes(h.lang)) {
+        if (lineas === undefined) lineas = lineasDe(vfile);
+        if (!esParaDibujar(h, lineas)) continue;
         hijos[i] = nodoDiagrama(h.value ?? "", {}, vfile, h.position);
         cuenta++;
       } else recorrer(h);
