@@ -60,7 +60,7 @@ jobs:
         run: npm test
       - name: mystmd y Typst
         run: npm install -g mystmd
-      - uses: typst-community/setup-typst@v4
+      - uses: typst-community/setup-typst@v5
       - name: Sitio de ejemplo y PDF
         working-directory: dibu-myst
         run: |
