@@ -135,7 +135,7 @@ test("salida diagramas: mismos nombres y SVG que dibu sync-md (kitchen sink)", (
   const lineas = fs.readFileSync(md, "utf8").split("\n");
   const hijos = [];
   for (let i = 0; i < lineas.length; i++) {
-    const m = /^(`{3,}|~{3,})[ \t]*(estructura|statics)[ \t]*$/.exec(lineas[i]);
+    const m = /^(`{3,}|~{3,})[ \t]*(dibu|estructura|statics)[ \t]*$/.exec(lineas[i]);
     if (!m) continue;
     let j = i + 1;
     while (j < lineas.length && lineas[j].trimEnd() !== m[1]) j++;
